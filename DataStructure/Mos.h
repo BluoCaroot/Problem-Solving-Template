@@ -7,7 +7,7 @@ struct query {
 };
 
 void code() {
-   uto del = [&](ll idx) {
+   auto del = [&](ll idx) {
         // to do
     };
     auto query = [&]() {

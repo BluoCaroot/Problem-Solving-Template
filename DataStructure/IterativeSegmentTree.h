@@ -1,4 +1,4 @@
-truct Tree {
+struct Tree {
     struct Node {
         ll sum;
 

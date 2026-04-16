@@ -1,100 +1,60 @@
-struct DSURollback {
-    struct Operation {
-        int u, v, szU;
-    };
-    stack<Operation> st;
-    vector<int> sz, par;
+#include "RollBackDSU.h"
 
-    DSURollback(int n) {
-        par.resize(n);
-        sz.resize(n);
-    }
-
-    void init() {
-        fill(sz.begin(), sz.end(), 1);
-        iota(par.begin(), par.end(), 0);
-    }
-
-    void rollback(int x) {
-        while (st.size() > x) {
-            auto e = st.top();
-            st.pop();
-            sz[e.u] = e.szU;
-            par[e.v] = e.v;
-        }
-    }
-
-    int findSet(int u) {
-        return par[u] == u ? u : findSet(par[u]);
-    }
-
-    bool sameSet(int u, int v) {
-        return findSet(u) == findSet(v);
-    }
-
-    void update(int u, int v) {
-        st.push({u, v, sz[u]});
-        par[v] = u;
-        sz[u] += sz[v];
-    }
-
-    void unionSet(int u, int v) {
-        u = findSet(u);
-        v = findSet(v);
-        if (u != v) {
-            if (sz[u] < sz[v])
-                swap(u, v);
-            update(u, v);
-        }
+struct query {
+    int v, u;
+    bool united;
+    query(int _v, int _u) : v(_v), u(_u) {
     }
 };
 
-struct SegmentTree {
-    int n;
-    vector<int> ans;
-    vector<vector<pair<int, int>>> tree;
-    DSURollback dsuRollback;
+struct QueryTree {
+    vector<vector<query>> t;
+    dsu_with_rollbacks dsu;
+    int T;
 
-    SegmentTree(int N, int Q) : dsuRollback(N) {
-        ans.resize(Q, -1);
-        n = 1;
-        while (n < Q)n *= 2;
-        tree.resize(2 * n + 5);
+    QueryTree() {}
+
+    QueryTree(int _T, int n) : T(_T) {
+        dsu = dsu_with_rollbacks(n);
+        t.resize(4 * T + 4);
     }
 
-    void solve(int x, int l, int r) {
-        int cur = dsuRollback.st.size();
-        for (auto i: tree[x])
-            dsuRollback.unionSet(i.first, i.second);
-
-        if (l == r) {
-            // solve the query at time l
-            dsuRollback.rollback(cur);
+    void add_to_tree(int v, int l, int r, int ul, int ur, query& q) {
+        if (ul > ur)
+            return;
+        if (l == ul && r == ur) {
+            t[v].push_back(q);
             return;
         }
-        int m = (l + r) >> 1;
-        solve(x * 2, l, m);
-        solve(x * 2 + 1, m + 1, r);
-        dsuRollback.rollback(cur);
+        int mid = (l + r) / 2;
+        add_to_tree(2 * v, l, mid, ul, min(ur, mid), q);
+        add_to_tree(2 * v + 1, mid + 1, r, max(ul, mid + 1), ur, q);
     }
 
-    void solve() {
-        solve(1, 0, n - 1);
+    void add_query(query q, int l, int r) {
+        add_to_tree(1, 0, T - 1, l, r, q);
     }
 
-    void addEdge(int x, int lX, int rX, int l, int r, int u, int v) {
-        if (rX < l || lX > r)
-            return;
-        if (lX >= l && rX <= r) {
-            tree[x].emplace_back(u, v);
-            return;
+    void dfs(int v, int l, int r, vector<int>& ans) {
+        for (query& q : t[v]) {
+            q.united = dsu.unite(q.v, q.u);
         }
-        int m = (lX + rX) >> 1;
-        addEdge(x * 2, lX, m, l, r, u, v);
-        addEdge(x * 2 + 1, m + 1, rX, l, r, u, v);
+        if (l == r)
+            ans[l] = dsu.comps;
+        else {
+            int mid = (l + r) / 2;
+            dfs(2 * v, l, mid, ans);
+            dfs(2 * v + 1, mid + 1, r, ans);
+        }
+        for (query q : t[v]) {
+            if (q.united)
+                dsu.rollback();
+        }
     }
 
-    void addEdge(int u, int v, int l, int r) {
-        addEdge(1, 0, n - 1, l, r, u, v);
+    vector<int> solve() {
+        vector<int> ans(T);
+        dfs(1, 0, T - 1, ans);
+        return ans;
     }
 };

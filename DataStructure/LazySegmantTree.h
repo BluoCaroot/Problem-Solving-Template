@@ -1,75 +1,74 @@
-struct Node {
-    ll val, lazy;
-    bool is_lazy;
+struct node {
+    ll sum, lazy = 0;
 
-    Node(int x = 0) {
-        val = x;
-        lazy = is_lazy = 0;
-    }
+    node(ll sum = 0) : sum(sum) {}
 
-    void change(ll x, int li, int ri) {
-        val += x * (ri - li);
-        lazy += x;
-        is_lazy = 1;
-    }
 };
 
-struct SegTreeLazy {
-    int tree_sz;
-    vector <Node> Seg_Data;
 
-    SegTreeLazy(int n) {
-        tree_sz = 1;
-        while (tree_sz < n)tree_sz <<= 1;
-        Seg_Data.assign(2 * tree_sz, Node());
+struct SegmentTree {
+    vector<node> st;
+    int sz;
+
+    SegmentTree(vector<int> &v) {
+        sz = 1;
+        while (sz < v.size())
+            sz <<= 1;
+        st.resize(sz << 1);
+        for (int i = 0; i < v.size(); ++i)
+            st[i + sz] = node(v[i]);
+        for (int i = sz - 1; i > 0; --i)
+            st[i] = merge(st[i << 1], st[i << 1 | 1]);
     }
 
-    Node merge(Node &li, Node &ri) {
-        Node parent = Node();
-        parent.val = li.val + ri.val;
-        return parent;
+    node merge(node left, node right) {
+        int sum = left.sum + right.sum;
+        return {sum};
+    }
+    void push(int v, int sl, int sr)
+    {
+        if (st[v].lazy)
+        {
+            st[v].sum = st[v].sum + st[v].lazy * (sr - sl + 1);
+            if (sl != sr)
+                st[v << 1].lazy = st[v << 1].lazy + st[v].lazy,
+                        st[v << 1 | 1].lazy = st[v << 1 | 1].lazy + st[v].lazy;
+            st[v].lazy = 0;
+        }
     }
 
-    void propagate(int ni, int li, int ri) {
-        if (!Seg_Data[ni].is_lazy or ri - li == 1)return;
-        int mid = (li + ri) >> 1;
-        Seg_Data[(ni << 1) + 1].change(Seg_Data[ni].lazy, li, mid);
-        Seg_Data[(ni << 1) + 2].change(Seg_Data[ni].lazy, mid, ri);
-        Seg_Data[ni].lazy = 0;
-        Seg_Data[ni].is_lazy = 0;
-    }
-
-    void update(int l, int r, ll val, int ni, int li, int ri) {
-        propagate(ni, li, ri);
-        if (li >= l && ri <= r) {
-            Seg_Data[ni].change(val, li, ri);
+    void update(int v, int sl, int sr, int ql, int qr, int val)
+    {
+        push(v, sl, sr);
+        if (sl > qr || sr < ql)
+            return;
+        if (ql <= sl && sr <= qr)
+        {
+            st[v].lazy = st[v].lazy + val;
+            push(v, sl, sr);
             return;
         }
-        if (ri <= l || li >= r)
-            return;
-        int mid = (li + ri) >> 1;
-        update(l, r, val, ni * 2 + 1, li, mid);
-        update(l, r, val, ni * 2 + 2, mid, ri);
-        Seg_Data[ni] = merge(Seg_Data[ni * 2 + 1], Seg_Data[ni * 2 + 2]);
+        int mid = (sl + sr) / 2;
+        update(v << 1, sl, mid, ql, qr, val);
+        update(v << 1 | 1, mid + 1, sr, ql, qr, val);
+        st[v] = merge(st[v << 1], st[v << 1 | 1]);
     }
 
-    void update(int l, int r, ll val) {
-        update(l, r, val, 0, 0, tree_sz);
+    node query(int v, int sl, int sr, int ql, int qr) {
+        push(v, sl, sr);
+        if (sl > qr || sr < ql)
+            return {};
+        if (ql <= sl && sr <= qr)
+            return st[v];
+        int mid = (sl + sr) / 2;
+        return merge(query(v << 1, sl, mid, ql, qr), query(v << 1 | 1, mid + 1, sr, ql, qr));
     }
 
-    Node query(int l, int r, int ni, int li, int ri) {
-        propagate(ni, li, ri);
-        if (l <= li && r >= ri)
-            return Seg_Data[ni];
-        if (l >= ri || r <= li)
-            return Node();
-        int mid = (ri + li) >> 1;
-        Node lnode = query(l, r, ni * 2 + 1, li, mid);
-        Node rnode = query(l, r, ni * 2 + 2, mid, ri);
-        return merge(lnode, rnode);
+    node query(int l, int r) {
+        return query(1, 0, sz - 1, l, r);
     }
 
-    ll query(int l, int r) { // note r not included
-        return query(l, r, 0, 0, tree_sz).val;
+    void update(int l, int r, int val) {
+        update(1, 0, sz - 1, l, r, val);
     }
 };

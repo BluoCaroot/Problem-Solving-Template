@@ -1,4 +1,4 @@
-struct Tree {
+truct Tree {
     struct Node {
         ll sum;
 
@@ -15,7 +15,7 @@ struct Tree {
         return ret;
     }
 
-    vector <T> s;
+    vector<T> s;
     int n;
 
     Tree(int n = 0) : s(2 * n, Node()), n(n) {}
@@ -33,5 +33,5 @@ struct Tree {
             if (e % 2) rb = f(s[--e], rb);
         }
         return f(ra, rb);
-    };
-}
+    }
+};
